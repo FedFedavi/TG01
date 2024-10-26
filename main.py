@@ -1,18 +1,38 @@
 import asyncio
 import random
+import aiohttp
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 
-from config import TOKEN
+from config import TOKEN, api_key
 
 bot = Bot(token=TOKEN)
-dp = Dispatcher()
+dp = Dispatcher(bot=bot)
 
 @dp.message(F.text == "Что такое ИИ?" )
 async def aitext(message: Message):
     await message.answer('ИИ — это технология, позволяющая машинам выполнять задачи, требующие человеческого интеллекта.')
+
+@dp.message(Command('weather'))
+async def get_weather(message: Message):
+    lat = 56.85
+    lon = 53.2333
+    url = f"https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={api_key}&units=metric&lang=ru"
+
+    # Устанавливаем таймаут
+    timeout = aiohttp.ClientTimeout(total=20)  # Общее время ожидания в секундах
+
+    async with aiohttp.ClientSession(timeout=timeout) as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                data = await response.json()
+                weather = data.get('weather', [{}])[0].get('description', 'Нет описания')
+                temperature = data.get('main', {}).get('temp', 'Нет данных о температуре')
+                await message.answer(f"Погода: {weather}, Температура: {temperature}°C")
+            else:
+                await message.answer("Не удалось получить данные о погоде.")
 
 @dp.message(F.photo)
 async def react_photo(message: Message):
@@ -32,7 +52,7 @@ async def photo(message: Message):
 
 @dp.message(Command('help'))
 async def help(message: Message):
-    await message.answer('Этот бот умеет выполнять команды: \n /start \n /help')
+    await message.answer('Этот бот умеет выполнять команды: \n /start \n /help \n /photo \n /weather')
 
 @dp.message(CommandStart)
 async def start(message: Message):
