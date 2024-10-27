@@ -19,8 +19,10 @@ async def react_photo(message: Message):
     list = ["Ого какая фотка!", "Непонял, это где", "Давай еще", "))"]
     rand_answ = random.choice(list)
     await message.answer(rand_answ)
+    await bot.download(message.photo[-1], destination=f'tmp/{message.photo[-1].file_id}.jpg')
 
-@dp.message(Command('photo'))
+
+@dp.message(Command('photo', prefix='&'))
 async def photo(message: Message):
     list = ["https://avatars.mds.yandex.net/i?id=d52244e4a21e7079c58e2870aaa2b58e14cb3bb9-12719281-images-thumbs&n=13",
             "https://avatars.mds.yandex.net/i?id=88597203364ee92eaff5bf5aaf820ff5f0f8ec94-5656601-images-thumbs&n=13",
@@ -34,9 +36,22 @@ async def photo(message: Message):
 async def help(message: Message):
     await message.answer('Этот бот умеет выполнять команды: \n /start \n /help')
 
-@dp.message(CommandStart)
+@dp.message(CommandStart())
+async def start2(message: Message):
+    name = message.from_user.first_name
+    await message.answer(f'Привет {name}, как дела?')
+
+
+@dp.message()
 async def start(message: Message):
-    await message.answer('Приветики! Я бот')
+    if message.text.lower() == 'тест':
+        await message.answer('Тестируем')
+    else:
+        await start1(message)
+
+@dp.message()
+async def start1(message: Message):
+    await message.send_copy(chat_id=message.chat.id)
 
 async def main():
     await dp.start_polling(bot)
