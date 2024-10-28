@@ -3,12 +3,47 @@ import random
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message
+from aiogram.types import Message, FSInputFile
+
+from gtts import gTTS
+import os
 
 from config import TOKEN
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+
+
+@dp.message(Command('video'))
+async def video(message: Message):
+    await bot.send_chat_action(message.chat.id, 'upload_video')
+    video = FSInputFile("video/video.mp4")
+    await bot.send_video(message.chat.id, video)
+
+
+@dp.message(Command('audio'))
+async def audio(message: Message):
+    audio = FSInputFile("audio/bird.mp3")
+    await bot.send_audio(message.chat.id, audio)
+
+
+@dp.message(Command('training'))
+async def training(message: Message):
+    training_list = [
+        "Тренировка №1. \n Приседания со штангой: 3 подхода по 10 повторений \nЖим лежа: 3 подхода по 8 повторений \nТяга блока к груди: 3 подхода по 12 повторений",
+        "Тренировка №2. \nВыпады с гантелями: 3 подхода по 10 повторений на каждую ногу \nТяга штанги в наклоне: 3 подхода по 10 повторений \nЖим гантелей сидя: 3 подхода по 12 повторений",
+        "Тренировка №3. \nПодъем на носки стоя: 3 подхода по 15 повторений \nПодтягивания на перекладине: 3 подхода по 6-8 повторений \nСкручивания на пресс: 3 подхода по 15 повторений"
+    ]
+    rand_tr = random.choice(training_list)
+    await message.answer(f"Это ваша мини-тренировка на сегодня {rand_tr}")
+
+    tts = gTTS(text=rand_tr, lang='ru')
+    tts.save("audio/training.mp3")
+    audio = FSInputFile("audio/training.mp3")
+    await bot.send_audio(message.chat.id, audio)
+    os.remove("audio/training.mp3")
+
+
 
 @dp.message(F.text == "Что такое ИИ?" )
 async def aitext(message: Message):
