@@ -9,9 +9,11 @@ from gtts import gTTS
 import os
 
 from config import TOKEN
+from googletrans import Translator
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
+translator = Translator()
 
 
 @dp.message(Command('video'))
@@ -19,6 +21,17 @@ async def video(message: Message):
     await bot.send_chat_action(message.chat.id, 'upload_video')
     video = FSInputFile("video/video.mp4")
     await bot.send_video(message.chat.id, video)
+
+
+@dp.message(Command('voice'))
+async def voice(message: Message):
+    voice = FSInputFile("audio/sample.ogg")
+    await message.answer_voice(voice)
+
+@dp.message(Command('doc'))
+async def doc(message: Message):
+    doc = FSInputFile("doc/doc.pdf")
+    await bot.send_document(message.chat.id, doc)
 
 
 @dp.message(Command('audio'))
@@ -38,10 +51,10 @@ async def training(message: Message):
     await message.answer(f"Это ваша мини-тренировка на сегодня {rand_tr}")
 
     tts = gTTS(text=rand_tr, lang='ru')
-    tts.save("audio/training.mp3")
-    audio = FSInputFile("audio/training.mp3")
-    await bot.send_audio(message.chat.id, audio)
-    os.remove("audio/training.mp3")
+    tts.save("audio/training.ogg")
+    audio = FSInputFile("audio/training.ogg")
+    await bot.send_voice(message.chat.id, audio)
+    os.remove("audio/training.ogg")
 
 
 
@@ -54,7 +67,14 @@ async def react_photo(message: Message):
     list = ["Ого какая фотка!", "Непонял, это где", "Давай еще", "))"]
     rand_answ = random.choice(list)
     await message.answer(rand_answ)
-    await bot.download(message.photo[-1], destination=f'tmp/{message.photo[-1].file_id}.jpg')
+    await save_photo(message)
+
+
+@dp.message(F.photo)
+async def save_photo(message: Message):
+    await bot.download(message.photo[-1], destination=f'img/{message.photo[-1].file_id}.jpg')
+    await message.answer(f'Сохранил в .img имя - {message.photo[-1].file_id}.jpg')
+
 
 
 @dp.message(Command('photo', prefix='&'))
@@ -82,11 +102,19 @@ async def start(message: Message):
     if message.text.lower() == 'тест':
         await message.answer('Тестируем')
     else:
-        await start1(message)
+        await trans(message)
 
 @dp.message()
-async def start1(message: Message):
-    await message.send_copy(chat_id=message.chat.id)
+async def trans(message: Message):
+    translated = translator.translate(message.text, dest='en')
+    translated_text = translated.text
+    await message.answer(translated_text)
+
+    tts = gTTS(text=translated_text, lang='en')
+    tts.save("audio/speak.ogg")
+    audio = FSInputFile("audio/speak.ogg")
+    await message.answer_voice(audio)
+    os.remove("audio/speak.ogg")
 
 async def main():
     await dp.start_polling(bot)
