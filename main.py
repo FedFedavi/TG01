@@ -3,17 +3,23 @@ import random
 
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, FSInputFile
+from aiogram.types import Message, FSInputFile, CallbackQuery
 
 from gtts import gTTS
 import os
 
 from config import TOKEN
 from googletrans import Translator
+import keyboards as kb
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 translator = Translator()
+
+
+@dp.message(F.text == "Тестовая кнопка 1")
+async def test_button1(message: Message):
+    await message.answer('Обработка нажатия Reply кнопки')
 
 
 @dp.message(Command('video'))
@@ -57,6 +63,11 @@ async def training(message: Message):
     os.remove("audio/training.ogg")
 
 
+@dp.callback_query(F.data == 'news')
+async def news(callback: CallbackQuery):
+    await callback.answer('Новости подгружаются', show_alert=True)
+    await callback.message.edit_text('Вот свежие новости', reply_markup=await kb.test_keyboard())
+
 
 @dp.message(F.text == "Что такое ИИ?" )
 async def aitext(message: Message):
@@ -94,7 +105,7 @@ async def help(message: Message):
 @dp.message(CommandStart())
 async def start2(message: Message):
     name = message.from_user.first_name
-    await message.answer(f'Привет {name}, как дела?')
+    await message.answer(f'Привет {name}, как дела?', reply_markup=kb.inline_keyboard_test)
 
 
 @dp.message()
