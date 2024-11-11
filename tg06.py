@@ -1,10 +1,10 @@
 import asyncio
 from aiogram import Bot, Dispatcher, F
-from aiogram. filters import CommandStart, Command
-from aiogram. types import Message, FSInputFile
-from aiogram. fsm. context import FSMContext
-from aiogram. fsm.state import State, StatesGroup
-from aiogram. fsm. storage. memory import MemoryStorage
+from aiogram.filters import CommandStart, Command
+from aiogram.types import Message, FSInputFile
+from aiogram.fsm. context import FSMContext
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.storage.memory import MemoryStorage
 
 from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.utils.keyboard import ReplyKeyboardBuilder, InlineKeyboardBuilder
@@ -13,6 +13,7 @@ from config import TOKEN
 import sqlite3
 import aiohttp
 import logging
+import requests
 
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -42,11 +43,12 @@ CREATE TABLE IF NOT EXISTS users (
     category3 TEXT,
     expenses1 REAL,
     expenses2 REAL,
-    expenses3 REAL,
+    expenses3 REAL
     )  
 ''')
 
 conn.commit()
+
 
 class FinancesForm(StatesGroup):
     category1 = State()
@@ -55,6 +57,45 @@ class FinancesForm(StatesGroup):
     expenses2 = State()
     category3 = State()
     expenses3 = State()
+
+
+@dp.message(CommandStart())
+async def send_start(message: Message):
+    await message.answer("Привет я ваш личный финансовый помошник. Выберите одну из опций в меню:", reply_markup=keyboards)
+
+
+@dp.message(F.text == 'Регистрация в телеграм боте')
+async def registration(message: Message):
+    telegram_id = message.from_user.id
+    name = message.from_user.full_name
+    cursor.execute('''SELECT * FROM users WHERE telegram_id = ?''', (telegram_id,))
+    user = cursor.fetchone()
+    if user:
+        await message.answer('Вы уже зарегистрированы!')
+    else:
+        cursor.execute('''INSERT INTO users (telegram_id, name) VALUES (?, ?)''', (telegram_id, name))
+        conn.commit()
+        await message.answer('Регистрация прошла успешно')
+
+
+@dp.message(F.text == 'Курс валют')
+async def exchange_rates(message: Message):
+    url = 'https://v6.exchangerate-api.com/v6/e15e8819d93c04fe20b2c71f/latest/USD'
+    try:
+        response = requests.get(url)
+        data = response.json()
+        if response.status_code != 200:
+            await message.answer('Не удалось получить данные о курсе валют')
+            return
+        usd_to_rub = data['conversion_rates']['RUB']
+        eur_to_usd = data['conversion_rates']['EUR']
+        eur_to_rub = usd_to_rub / eur_to_usd
+
+        await message.answer(f'1_USD - {usd_to_rub:.2f} RUB\n'
+                             f'1_EUR - {eur_to_rub:.2f} RUB')
+    except:
+        await message.answer('Произошла ошибка курс валют не получен')
+
 
 async def main():
     await dp.start_polling(bot)
