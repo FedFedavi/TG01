@@ -1,8 +1,10 @@
 import asyncio
+import random
+
 from aiogram import Bot, Dispatcher, F
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, FSInputFile
-from aiogram.fsm. context import FSMContext
+from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.fsm.storage.memory import MemoryStorage
 
@@ -23,7 +25,7 @@ logging.basicConfig(level=logging.INFO)
 button_registr = KeyboardButton(text="Регистрация в телеграм боте")
 button_exchange_rates = KeyboardButton(text="Курс валют")
 button_tips = KeyboardButton(text="Советы по экономии")
-button_finances = KeyboardButton(text = "Личные финансы")
+button_finances = KeyboardButton(text="Личные финансы")
 
 keyboards = ReplyKeyboardMarkup(keyboard=[
     [button_registr, button_exchange_rates],
@@ -93,8 +95,79 @@ async def exchange_rates(message: Message):
 
         await message.answer(f'1_USD - {usd_to_rub:.2f} RUB\n'
                              f'1_EUR - {eur_to_rub:.2f} RUB')
-    except:
-        await message.answer('Произошла ошибка курс валют не получен')
+    except Exception as e:
+        await message.answer(f'Произошла ошибка: {str(e)}, курс валют не получен')
+
+
+
+@dp.message(F.text == 'Советы по экономии')
+async def send_tips(message: Message):
+    tips = [
+        '1. Создайте и придерживайтесь бюджета, отслеживая доходы и расходы, чтобы не выходить за рамки.',
+        '2. Установите краткосрочные и долгосрочные финансовые цели, чтобы оставаться мотивированным на экономии.',
+        '3. Избегайте импульсных покупок, откладывая их на несколько дней для обдумывания.',
+        '4. Ищите скидки и используйте кэшбек - сервисы для снижения расходов.',
+        '5. Готовьте еду дома и берите обеды на работу, чтобы сэкономить и питаться здоровее.'
+        ]
+    tip = random.choice(tips)
+    await message.answer(tip)
+
+
+@dp.message(F.text == 'Личные финансы')
+async def finance(message: Message, state: FSMContext):
+    await state.set_state(FinancesForm.category1)
+    await message.reply('Введите первую категорию расходов')
+
+
+@dp.message(FinancesForm.category1)
+async def finance(message: Message, state: FSMContext):
+    await state.update_data(category1=message.text)
+    await state.set_state(FinancesForm.expenses1)
+    await message.reply('Введите расходы для категории1:')
+
+
+@dp.message(FinancesForm.expenses1)
+async def finance(message: Message, state: FSMContext):
+    await state.update_data(expenses1=float(message.text))
+    await state.set_state(FinancesForm.category2)
+    await message.reply('Введите вторую категорию расходов')
+
+
+@dp.message(FinancesForm.category2)
+async def finance(message: Message, state: FSMContext):
+    await state.update_data(category2=message.text)
+    await state.set_state(FinancesForm.expenses2)
+    await message.reply('Введите расходы для категории2:')
+
+
+@dp.message(FinancesForm.expenses2)
+async def finance(message: Message, state: FSMContext):
+    await state.update_data(expenses2=float(message.text))
+    await state.set_state(FinancesForm.category3)
+    await message.reply('Введите третью категорию расходов')
+
+
+@dp.message(FinancesForm.category3)
+async def finance(message: Message, state: FSMContext):
+    await state.update_data(category3=message.text)
+    await state.set_state(FinancesForm.expenses3)
+    await message.reply('Введите расходы для категории3:')
+
+
+@dp.message(FinancesForm.expenses3)
+async def finance(message: Message, state: FSMContext):
+    data = await state.get_data()
+    telegram_id = message.from_user.id
+    (cursor.execute('''
+    UPDATE users SET category1 = ?, expenses1 = ?, category2 = ?, expenses2 = ?, category3 = ?, expenses3 = ?
+    WHERE telegram_id = ?''',
+     (data['category1'], data['expenses1'], data['category2'], data['expenses2'],
+      data['category3'], float(message.text), telegram_id)))
+
+    conn.commit()
+    await state.clear()
+
+    await message.answer('Категории и расходы приняты')
 
 
 async def main():
